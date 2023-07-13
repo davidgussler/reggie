@@ -15,7 +15,11 @@
 // * Unit tests
 // * README.md documentation
 // * Split vhdl long description into multiple lines in vhdl headers
-// 
+// * Check if output files exist before overwriting
+// * only generate one datetime stamp for the entire program run rather than 
+//   generating a new datetime stamp for each output file
+// * Add option to output the axil pipe and axil to bus modules
+// * 
 
 use std::error; 
 use serde::{Serialize, Deserialize};
@@ -39,12 +43,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     if args.vhdl {
         let module = gen_vhdl_module(&rm);
-        let mut file_path = out_dir.clone();
-        file_path.push(format!("{}.vhd",rm.name)); 
-        std::fs::write(file_path, module)?;
+        let mut module_path = out_dir.clone();
+        module_path.push(format!("{}.vhd",rm.name)); 
+        std::fs::write(module_path, module)?;
 
         let package = gen_vhdl_package(&rm);
-        std::fs::write("examp_output_pkg.vhd", package)?;
+        let mut package_path = out_dir.clone();
+        package_path.push(format!("{}.vhd",rm.name)); 
+        std::fs::write(package_path, package)?;
     }
     if args.markdown {
         let markdown = gen_markdown(&rm);
@@ -62,6 +68,10 @@ struct Args {
     #[arg(short, long)]
     json_file: std::path::PathBuf,
 
+    /// Output directory for generated files
+    #[arg(short, long)]
+    output_dir: Option<std::path::PathBuf>,
+
     /// Generate VHDL registers
     #[arg(short, long)]
     vhdl: bool,
@@ -78,9 +88,9 @@ struct Args {
     #[arg(short, long)]
     markdown: bool,
 
-    /// Output directory for generated files
+    /// Force overwrite if output files already exist
     #[arg(short, long)]
-    output_dir: Option<std::path::PathBuf>,
+    force: bool,
 }
 
 // JSON versions of the register map structs for serde_json

@@ -1,29 +1,54 @@
-use std::fs;
+// TODO:
+// * More checking of inputs
+// * Clippy
+// * Rust format
+// * Rust in-code documentation with ///
+// * Remove use statements
+// * C/C++-driver generation for both bare metal and OS
+// * Rust driver generation for OS
+// * V-Unit testbench generation
+// * Update all vhdl modules to use terosHDL auto-documenter
+// * All Rust code needs a refactor to make it more sane
+// * Needs more sane error checking
+// * Should be split into many files / modules
+// * Output example JSON file to use as a template
+// * Unit tests
+// * README.md documentation
+// * Split vhdl long description into multiple lines in vhdl headers
+// 
+
 use std::error; 
 use serde::{Serialize, Deserialize};
 use serde_json;
 use clap::Parser;
-use std::path;
 use chrono; 
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let args = Args::parse();
-    let json_str = fs::read_to_string(&args.json_file)?;
+    let json_str = std::fs::read_to_string(&args.json_file)?;
     let rm: RegMap = serde_json::from_str(&json_str)?;
     check_regmap(&rm)?;
 
+    // Default to current directory
+    let out_dir = args.output_dir.unwrap_or(std::path::PathBuf::from(".")); 
+
+    // Create output directory if it doesn't already exist
+    std::fs::create_dir_all(&out_dir)?; 
+
     if args.vhdl {
         let module = gen_vhdl_module(&rm);
-        fs::write("examp_output.vhd", module)?;
+        let mut file_path = out_dir.clone();
+        file_path.push(format!("{}.vhd",rm.name)); 
+        std::fs::write(file_path, module)?;
 
         let package = gen_vhdl_package(&rm);
-        fs::write("examp_output_pkg.vhd", package)?;
+        std::fs::write("examp_output_pkg.vhd", package)?;
     }
     if args.markdown {
         let markdown = gen_markdown(&rm);
-        fs::write("examp_output.md", markdown)?;
+        std::fs::write("examp_output.md", markdown)?;
     }
 
     Ok(())
@@ -35,7 +60,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 struct Args {
     /// JSON register description file
     #[arg(short, long)]
-    json_file: path::PathBuf,
+    json_file: std::path::PathBuf,
 
     /// Generate VHDL registers
     #[arg(short, long)]
@@ -52,6 +77,10 @@ struct Args {
     /// Generate markdown documentation
     #[arg(short, long)]
     markdown: bool,
+
+    /// Output directory for generated files
+    #[arg(short, long)]
+    output_dir: Option<std::path::PathBuf>,
 }
 
 // JSON versions of the register map structs for serde_json

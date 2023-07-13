@@ -3,7 +3,7 @@ name = "reggie"
 version = "0.1.0"
 edition = "2021"
 authors = ["David Gussler"]
-description = "reggie - an FPGA register manager"
+description = "Register Manager for FPGA/ASIC"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

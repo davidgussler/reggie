@@ -19,7 +19,11 @@
 // * only generate one datetime stamp for the entire program run rather than 
 //   generating a new datetime stamp for each output file
 // * Add option to output the axil pipe and axil to bus modules
-// * 
+// * Make fields optional???
+// * If array, then should always be a vhdl array (even if set to 1)
+//   This behavior makes more sense and ligns up better with the language
+//   And if None instead of Some(array), then array will display as NA in the markdown and not be an arrya in the vhdl 
+// * Add description somewhere in the markdown file explaining the register access types
 
 use std::error; 
 use serde::{Serialize, Deserialize};
@@ -44,17 +48,19 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     if args.vhdl {
         let module = gen_vhdl_module(&rm);
         let mut module_path = out_dir.clone();
-        module_path.push(format!("{}.vhd",rm.name)); 
+        module_path.push(format!("{}.vhd",&rm.name)); 
         std::fs::write(module_path, module)?;
 
         let package = gen_vhdl_package(&rm);
         let mut package_path = out_dir.clone();
-        package_path.push(format!("{}.vhd",rm.name)); 
+        package_path.push(format!("{}_pkg.vhd",&rm.name)); 
         std::fs::write(package_path, package)?;
     }
     if args.markdown {
         let markdown = gen_markdown(&rm);
-        std::fs::write("examp_output.md", markdown)?;
+        let mut markdown_path = out_dir.clone();
+        markdown_path.push(format!("{}.md",&rm.name));
+        std::fs::write(markdown_path, markdown)?;
     }
 
     Ok(())
@@ -111,7 +117,7 @@ struct Reg {
     name: String, // must only have valid VHDL characters. need to check for keywords in c, rust, and vhdl. must ber less than a certian number of characters too.
     desc: Option<String>,
     long_desc: Option<String>,
-    access: String, // "RW", "RO", "RWV"
+    access: String, // "RW", "RO", "RWV", WO
     addr_offset: String, // hex - well... first support hex only, then move to supporting binary/decimal
     fields: Vec<Field>
 }
@@ -472,9 +478,9 @@ fn check_regmap(rm: &RegMap) -> Result<(), Box<dyn error::Error>> {
         check_valid_identifier(&reg.name)?;
 
         match reg.access.as_str() {
-            "RW" | "RO" | "RWV" => (),
+            "RW" | "RO" | "RWV" | "WO" => (),
             _ => {
-                let msg = format!("\"{}\" is an unkown access type. please use \"RW\", \"RO\", or \"RWV\"", &reg.access);
+                let msg = format!("\"{}\" is an unkown access type. please use \"RW\", \"RO\", or \"RWV\" \"WO\"", &reg.access);
                 Err(msg)?
             }
         }
@@ -631,6 +637,9 @@ begin
                         s.push_str(&format!("    o_ctl.{}{}.{} <= ctl({})({});\n", r.name, insert, f.name, reg_num, logic));
                         s.push_str(&format!("    sts({})({}) <= i_sts.{}{}.{};\n", reg_num, logic, r.name, insert, f.name));
                     },
+                    "WO" => {
+                        s.push_str(&format!("    o_ctl.{}{}.{} <= ctl({})({});\n", r.name, insert, f.name, reg_num, logic));
+                    },
                     _ => panic!("Illegal access type specified"),
                 }
             }
@@ -642,6 +651,10 @@ begin
                     s.push_str(&format!("    o_wr.{}{} <= wr({});\n", r.name, insert, reg_num));
                 },
                 "RO" => {
+                    s.push_str(&format!("    o_rd.{}{} <= rd({});\n", r.name, insert, reg_num));
+                },
+                "WO" => {
+                    s.push_str(&format!("    o_wr.{}{} <= wr({});\n", r.name, insert, reg_num));
                 },
                 _ => panic!("Illegal access type specified"),
             }
@@ -672,7 +685,7 @@ fn gen_vhdl_package(rm: &RegMap) -> String {
 "-- #############################################################################
 -- #  << {} Package >>
 -- # ===========================================================================
--- # File             : {}.vhd
+-- # File             : {}_pkg.vhd
 -- # Language         : VHDL '08
 -- # Generator Author : David Gussler
 -- #
@@ -695,11 +708,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.gen_utils_pkg.all;
 
-package examp_regs_pkg is
+package {}_pkg is
     -- -------------------------------------------------------------------------
     -- Generics
     -- -------------------------------------------------------------------------
-");
+", rm.name);
 
     s.push_str(&format!("{header}{libraries}"));
 
@@ -808,7 +821,7 @@ package examp_regs_pkg is
             insert = ""; 
         }
 
-        if r.access == "RW" || r.access == "RWV" {
+        if r.access == "RW" || r.access == "RWV" || r.access == "WO" {
             s.push_str(&format!("        {} : {}_{}_fld_{}t;\n", r.name, rm.name, r.name, insert));
         }
     }
@@ -855,7 +868,7 @@ package examp_regs_pkg is
             _ => format!("std_logic_vector({} downto 0)", array_length-1),
         };
 
-        if r.access == "RWV" || r.access == "RW" {
+        if r.access == "RWV" || r.access == "RW" || r.access == "WO" {
             s.push_str(&format!("        {} : {};\n", r.name, logic));
         }
     }

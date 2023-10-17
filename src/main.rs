@@ -24,6 +24,9 @@
 //   This behavior makes more sense and ligns up better with the language
 //   And if None instead of Some(array), then array will display as NA in the markdown and not be an arrya in the vhdl 
 // * Add description somewhere in the markdown file explaining the register access types
+// * Give reasonable names to register numbers in the VHDL package so the values
+//   such as addersses and default values can be used elsewhere in in the code.
+//   Right now they are just 0,1,2,3, etc.
 
 use std::error; 
 use serde::{Serialize, Deserialize};

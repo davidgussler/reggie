@@ -1,4 +1,4 @@
-This is a VHDL register file generator written in Rust
+This is a VHDL register file generator.
 
 Given a JSON input file containing a register dscritption, it can generate:
 
@@ -10,4 +10,4 @@ Given a JSON input file containing a register dscritption, it can generate:
 Right now this project is in a very unfinished state. There are still tons of 
 features / improvements left to make if I ever find the time. For now, this 
 works "well enough" to get a project up and running, but it still leaves a lot 
-to be desired.
+to be desired. Mainly, I just did this as a toy project to start learning Rust. 
